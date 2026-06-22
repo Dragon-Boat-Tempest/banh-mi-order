@@ -66,7 +66,7 @@
   .submit:disabled{opacity:.65;cursor:default}
   .note{margin-top:14px;font-size:12.5px;color:var(--ink-soft);display:flex;gap:7px;align-items:flex-start;line-height:1.45}
   .note svg{flex:none;margin-top:1px}
-  .err{color:var(--red-deep);font-size:13px;font-weight:500;margin-top:12px;min-height:18px}
+  .err{color:var(--red-deep);font-size:15px;font-weight:600;margin-top:12px;min-height:18px}
   .confirm{background:#eef6f1;border:1.5px solid #bfe0d2;border-radius:11px;padding:14px 16px;margin-bottom:20px;display:none;font-size:14.5px;color:#13594b}
   .confirm b{color:#0d4a3d}
 </style>
@@ -88,7 +88,10 @@
 
         <fieldset>
           <div class="section-label">Your name</div>
-          <div class="field"><input type="text" id="name" placeholder="e.g. Jacky" autocomplete="name"></div>
+          <div class="field">
+            <label class="fl" for="name">Name <span class="req">*</span></label>
+            <input type="text" id="name" placeholder="e.g. Jacky" autocomplete="name">
+          </div>
 
           <div class="section-label">Meals</div>
           <div class="field">
