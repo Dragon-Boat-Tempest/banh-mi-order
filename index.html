@@ -110,6 +110,16 @@
             <select id="drink2"><option>Loading menu…</option></select>
           </div>
 
+          <div class="section-label">Toppings</div>
+          <div class="field">
+            <label class="fl" for="topping1">Topping 1 <span class="opt">— optional, for smoothies</span></label>
+            <select id="topping1"><option>Loading menu…</option></select>
+          </div>
+          <div class="field">
+            <label class="fl" for="topping2">Topping 2 <span class="opt">— optional</span></label>
+            <select id="topping2"><option>Loading menu…</option></select>
+          </div>
+
           <div class="section-label">Special requests</div>
           <div class="field">
             <label class="fl" for="notes">Allergies &amp; notes <span class="opt">— optional</span></label>
@@ -227,9 +237,26 @@
 
   var meal1=document.getElementById("meal1"), meal2=document.getElementById("meal2");
   var drink1=document.getElementById("drink1"), drink2=document.getElementById("drink2");
+  var topping1=document.getElementById("topping1"), topping2=document.getElementById("topping2");
   var notes=document.getElementById("notes");
 
-  function renderMenu(mealGroups, drinkGroups){
+  function buildToppingOptions(groups, secondary){
+    var html = secondary
+      ? '<option value="'+NONE2+'" selected>No second topping</option>'
+      : '<option value="'+NONE2+'" selected>No topping</option>';
+    groups.forEach(function(g){
+      html += '<optgroup label="'+g.label+'">';
+      g.items.forEach(function(it){
+        var name=it[0], price=it[1], val="topping — "+name;
+        priceMap[val]=price; labelMap[val]=name;
+        html += '<option value="'+val+'">'+name+' — '+money(price)+'</option>';
+      });
+      html += '</optgroup>';
+    });
+    return html;
+  }
+
+  function renderMenu(mealGroups, drinkGroups, toppingGroups){
     priceMap={}; labelMap={};
     priceMap[NONE2]=0; priceMap[NODRINK]=0;
     labelMap[NONE2]="(only one)"; labelMap[NODRINK]="No drink";
@@ -238,6 +265,8 @@
     meal2.innerHTML=buildMealOptions(mealGroups,true);
     drink1.innerHTML=buildDrinkOptions(drinkGroups,false);
     drink2.innerHTML=buildDrinkOptions(drinkGroups,true);
+    topping1.innerHTML=buildToppingOptions(toppingGroups,false);
+    topping2.innerHTML=buildToppingOptions(toppingGroups,true);
 
     [meal1,drink1].forEach(function(s){
       if(s.value==="") s.classList.add("placeholder"); else s.classList.remove("placeholder");
@@ -245,9 +274,16 @@
     updateLiveTotal();
   }
 
+  var FALLBACK_toppingGroups = [
+    { label:"Smoothie Toppings", items:[
+      ["Tapioca",1.00],["Brown Sugar Boba",1.00],["Lychee Jelly",1.00],
+      ["Mango Jelly",1.00],["Mango Popping Pearls",1.00],["Dragon Fruit Popping Pearls",1.00]
+    ]}
+  ];
+
   async function loadMenu(){
     if(APPS_SCRIPT_URL.indexOf("PASTE_YOUR")===0){
-      renderMenu(FALLBACK_mealGroups, FALLBACK_drinkGroups);
+      renderMenu(FALLBACK_mealGroups, FALLBACK_drinkGroups, FALLBACK_toppingGroups);
       return;
     }
     try{
@@ -256,10 +292,14 @@
       if(!data || data.ok===false || !data.menu || !data.menu.length){
         throw new Error((data && data.error) || "Menu came back empty.");
       }
-      renderMenu(groupsFromMenu(data.menu,"meal"), groupsFromMenu(data.menu,"drink"));
+      renderMenu(
+        groupsFromMenu(data.menu,"meal"),
+        groupsFromMenu(data.menu,"drink"),
+        groupsFromMenu(data.menu,"topping")
+      );
     }catch(e){
       console.error("[order-form] menu fetch failed, using fallback menu:", e);
-      renderMenu(FALLBACK_mealGroups, FALLBACK_drinkGroups);
+      renderMenu(FALLBACK_mealGroups, FALLBACK_drinkGroups, FALLBACK_toppingGroups);
       var err=document.getElementById("err");
       if(err) err.textContent="Showing a saved menu — couldn't reach the live menu just now.";
     }
@@ -270,12 +310,13 @@
     s.addEventListener("change",sync); sync();
   });
 
-  function priceOf(v){ return (v && priceMap[v]!=null) ? priceMap[v] : 0; }
+  function priceOf(v){ return (v && v!==NONE2 && priceMap[v]!=null) ? priceMap[v] : 0; }
   function updateLiveTotal(){
-    var t=priceOf(meal1.value)+priceOf(meal2.value)+priceOf(drink1.value)+priceOf(drink2.value);
+    var t=priceOf(meal1.value)+priceOf(meal2.value)+priceOf(drink1.value)+priceOf(drink2.value)
+         +priceOf(topping1.value)+priceOf(topping2.value);
     document.getElementById("livetotalval").textContent=money(t);
   }
-  [meal1,meal2,drink1,drink2].forEach(function(s){ s.addEventListener("change",updateLiveTotal); });
+  [meal1,meal2,drink1,drink2,topping1,topping2].forEach(function(s){ s.addEventListener("change",updateLiveTotal); });
   updateLiveTotal();
 
   loadMenu(); // fetches the live menu from the Sheet and populates all four dropdowns
@@ -305,12 +346,15 @@
       if(!drink1.value){ err.textContent="Please pick Drink 1 (you can choose “No drink”)."; drink1.focus(); return; }
       order={
         name:name,
-        meal1: meal1.value===NONE2?"":(labelMap[meal1.value]||""),
-        meal2: (meal2.value===NONE2)?"":(labelMap[meal2.value]||""),
+        meal1: meal1.value===NONE2?"":(labelMap[meal1.value]||meal1.value),
+        meal2: meal2.value===NONE2?"":(labelMap[meal2.value]||""),
         drink1: drink1.value===NODRINK ? "No drink" : (labelMap[drink1.value]||""),
-        drink2: (drink2.value===NONE2)?"":(labelMap[drink2.value]||""),
+        drink2: drink2.value===NONE2?"":(labelMap[drink2.value]||""),
+        topping1: topping1.value===NONE2?"":(labelMap[topping1.value]||""),
+        topping2: topping2.value===NONE2?"":(labelMap[topping2.value]||""),
         notes: notes.value.trim(),
         total: priceOf(meal1.value)+priceOf(meal2.value)+priceOf(drink1.value)+priceOf(drink2.value)
+              +priceOf(topping1.value)+priceOf(topping2.value)
       };
     }
 
@@ -341,6 +385,7 @@
       document.getElementById("name").value=""; notes.value="";
       meal1.selectedIndex=0; drink1.selectedIndex=0;
       meal2.value=NONE2; drink2.value=NONE2;
+      topping1.value=NONE2; topping2.value=NONE2;
       meal1.classList.add("placeholder"); drink1.classList.add("placeholder");
       updateLiveTotal();
 
