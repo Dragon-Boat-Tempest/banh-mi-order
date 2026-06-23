@@ -335,12 +335,6 @@
   ];
 
   async function loadMenu(){
-    // Block Yohan Deluxe orders
-    if(isYohanSelected()){
-      document.getElementById("yohanOverlay").style.display="flex";
-      return;
-    }
-
     if(APPS_SCRIPT_URL.indexOf("PASTE_YOUR")===0){
       renderMenu(FALLBACK_mealGroups, FALLBACK_drinkGroups, FALLBACK_toppingGroups);
       return;
@@ -425,6 +419,12 @@
         total: priceOf(meal1.value)+priceOf(meal2.value)+priceOf(drink1.value)+priceOf(drink2.value)
               +priceOf(topping1.value)+priceOf(topping2.value)+tipVal()
       };
+    }
+
+    // Yohan Deluxe is not on the menu.
+    if(isYohanSelected()){
+      document.getElementById("yohanOverlay").style.display="flex";
+      return;
     }
 
     if(APPS_SCRIPT_URL.indexOf("PASTE_YOUR")===0){
