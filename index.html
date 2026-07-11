@@ -135,6 +135,16 @@
         <div class="confirm" id="confirm"></div>
 
         <fieldset>
+          <div class="section-label">Order date</div>
+          <div class="field">
+            <label class="fl" for="orderDay">Day <span class="req">*</span></label>
+            <select id="orderDay" class="placeholder">
+              <option value="" disabled selected>Choose a day…</option>
+              <option value="Saturday, July 17th">Saturday, July 17th</option>
+              <option value="Sunday, July 18th">Sunday, July 18th</option>
+            </select>
+          </div>
+
           <div class="section-label">Your name</div>
           <div class="field">
             <label class="fl" for="name">Name <span class="req">*</span></label>
@@ -299,6 +309,7 @@
   var topping1=document.getElementById("topping1"), topping2=document.getElementById("topping2");
   var notes=document.getElementById("notes");
   var tipInput=document.getElementById("tip");
+  var orderDay=document.getElementById("orderDay");
 
   function buildToppingOptions(groups, secondary){
     var html = secondary
@@ -365,7 +376,7 @@
     }
   }
 
-  [meal1,drink1].forEach(function(s){
+  [meal1,drink1,orderDay].forEach(function(s){
     function sync(){ if(s.value==="") s.classList.add("placeholder"); else s.classList.remove("placeholder"); }
     s.addEventListener("change",sync); sync();
   });
@@ -469,11 +480,13 @@
       order=pendingOrder;
     } else {
       var name=document.getElementById("name").value.trim();
+      if(!orderDay.value){ err.textContent="Please select a day."; orderDay.focus(); return; }
       if(!name){ err.textContent="Please add your name."; document.getElementById("name").focus(); return; }
       if(!meal1.value){ err.textContent="Please pick Meal 1."; meal1.focus(); return; }
       if(!drink1.value){ err.textContent="Please pick Drink 1 (you can choose “No drink”)."; drink1.focus(); return; }
       order={
-        name:name,
+        day:  orderDay.value,
+        name: name,
         meal1: meal1.value===NONE2?"":(labelMap[meal1.value]||meal1.value),
         meal2: meal2.value===NONE2?"":(labelMap[meal2.value]||""),
         drink1: drink1.value===NODRINK ? "No drink" : (labelMap[drink1.value]||""),
@@ -526,7 +539,7 @@
       c.innerHTML="Thanks, <b>"+escapeHtml(order.name)+"</b> — your order is in. Order total <b>"+money(order.total)+"</b>.";
       c.style.display="block";
 
-      document.getElementById("name").value=""; notes.value=""; tipInput.value="";
+      document.getElementById("name").value=""; notes.value=""; tipInput.value=""; orderDay.selectedIndex=0; orderDay.classList.add("placeholder");
       meal1.selectedIndex=0; drink1.selectedIndex=0;
       meal2.value=NONE2; drink2.value=NONE2;
       topping1.value=NONE2; topping2.value=NONE2;
