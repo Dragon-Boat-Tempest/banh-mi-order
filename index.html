@@ -51,8 +51,11 @@
   }
 
   function groupsFromMenu(menu, type){     var byCat={}, order=[];     menu.filter(function(m){ return m.type===type; }).forEach(function(m){       if(!byCat[m.category]){ byCat[m.category]=[]; order.push(m.category); }       byCat[m.category].push([m.item, m.price]);     });     return order.map(function(cat){       var g={ label:cat, items:byCat[cat] };       if(type==="drink") g.prefix=cat; /* mirrors the original prefix-per-category scheme */       return g;     });   }    var meal1=document.getElementById("meal1"), meal2=document.getElementById("meal2");   var drink1=document.getElementById("drink1"), drink2=document.getElementById("drink2");   var topping1=document.getElementById("topping1"), topping2=document.getElementById("topping2");   var notes=document.getElementById("notes");   var tipInput=document.getElementById("tip");   var orderDay=document.getElementById("orderDay");    function buildToppingOptions(groups, secondary){     var html = secondary       ? '<option value="'+NONE2+'" selected>No second topping</option>'       : '<option value="'+NONE2+'" selected>No topping</option>';     groups.forEach(function(g){       html += '<optgroup label="'+g.label+'">';       g.items.forEach(function(it){         var name=it[0], price=it[1], val="topping — "+name;         priceMap[val]=price; labelMap[val]=name;         html += '<option value="'+val+'">'+name+' — '+money(price)+'</option>';       });       html += '</optgroup>';     });     return html;   }    function renderMenu(mealGroups, drinkGroups, toppingGroups){     priceMap={}; labelMap={};     priceMap[NONE2]=0; priceMap[NODRINK]=0;     labelMap[NONE2]="(only one)"; labelMap[NODRINK]="No drink";      meal1.innerHTML=buildMealOptions(mealGroups,false);     meal2.innerHTML=buildMealOptions(mealGroups,true);     drink1.innerHTML=buildDrinkOptions(drinkGroups,false);     drink2.innerHTML=buildDrinkOptions(drinkGroups,true);     topping1.innerHTML=buildToppingOptions(toppingGroups,false);     topping2.innerHTML=buildToppingOptions(toppingGroups,true);      [meal1,drink1].forEach(function(s){       if(s.value==="") s.classList.add("placeholder"); else s.classList.remove("placeholder");     });     updateLiveTotal();   }    var FALLBACK_toppingGroups = [     { label:"Smoothie Toppings", items:[       ["Tapioca",1.00],["Brown Sugar Boba",1.00],["Lychee Jelly",1.00],       ["Mango Jelly",1.00],["Mango Popping Pearls",1.00],["Dragon Fruit Popping Pearls",1.00]     ]}   ];    async function loadMenu(){
+    var ctrl = new AbortController();
+    var timedOut = false;
+    var timer = setTimeout(function(){ timedOut = true; ctrl.abort(); }, 7000);
     try{
-      var resp = await fetch(MENU_CSV_URL, { method:"GET" });
+      var resp = await fetch(MENU_CSV_URL, { method:"GET", signal: ctrl.signal });
       if(!resp.ok) throw new Error("HTTP "+resp.status);
       var text = await resp.text();
       var menu = menuFromCSV(text);
@@ -62,10 +65,13 @@
         groupsFromMenu(menu,"topping")
       );
     }catch(e){
-      console.error("[order-form] menu fetch from Google Sheet failed, using fallback menu:", e);
+      console.error("[order-form] menu fetch from Google Sheet failed, using fallback menu:",
+                    timedOut ? "timed out after 7s" : e);
       renderMenu(FALLBACK_mealGroups, FALLBACK_drinkGroups, FALLBACK_toppingGroups);
       var err=document.getElementById("err");
       if(err) err.textContent="Showing a saved menu — couldn't reach the live menu just now.";
+    }finally{
+      clearTimeout(timer);
     }
   }
 
